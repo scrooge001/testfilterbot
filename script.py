@@ -1,6 +1,6 @@
 import logging
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # Replace with your actual bot token and channel ID
 TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
@@ -14,39 +14,37 @@ logger = logging.getLogger(__name__)
 def is_admin(user_id):
     return user_id in ADMIN_USER_IDS
 
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Welcome! Send a movie name or type "search <movie_name>" to find a movie.')
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text('Welcome! Send a movie name or type "search <movie_name>" to find a movie.')
 
-def search_movie(update: Update, context: CallbackContext) -> None:
+async def search_movie(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     movie_name = ' '.join(context.args)
     if not movie_name:
-        update.message.reply_text('Please specify a movie name. Use "search <movie_name>".')
+        await update.message.reply_text('Please specify a movie name. Use "search <movie_name>".')
         return
 
     # Simulated search functionality (you would implement this)
-    context.bot.send_message(chat_id=MOVIE_CHANNEL_ID, text=f"Searching for: {movie_name}")
+    await context.bot.send_message(chat_id=MOVIE_CHANNEL_ID, text=f"Searching for: {movie_name}")
     
     # Forwarding a placeholder file
     file_id = 'YOUR_FILE_ID'  # Replace with actual file ID or logic to get the file
-    context.bot.forward_message(chat_id=update.message.chat_id, from_chat_id=MOVIE_CHANNEL_ID, message_id=file_id)
+    await context.bot.forward_message(chat_id=update.message.chat_id, from_chat_id=MOVIE_CHANNEL_ID, message_id=file_id)
 
-def admin_command(update: Update, context: CallbackContext) -> None:
+async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if is_admin(update.message.from_user.id):
-        # Example of an admin command to view current status
-        update.message.reply_text("Admin command executed!")
+        await update.message.reply_text("Admin command executed!")
     else:
-        update.message.reply_text("You do not have permission to execute this command.")
+        await update.message.reply_text("You do not have permission to execute this command.")
 
-def main() -> None:
-    updater = Updater(TOKEN)
-    dp = updater.dispatcher
+async def main() -> None:
+    application = ApplicationBuilder().token(TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("search", search_movie))
+    application.add_handler(CommandHandler("admin", admin_command))
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("search", search_movie))
-    dp.add_handler(CommandHandler("admin", admin_command))  # Admin command
-
-    updater.start_polling()
-    updater.idle()
+    await application.run_polling()
 
 if __name__ == '__main__':
-    main()
+    import asyncio
+    asyncio.run(main())
